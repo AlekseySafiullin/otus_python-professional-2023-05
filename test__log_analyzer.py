@@ -1,6 +1,7 @@
 import json
 import unittest
 import filecmp
+import shutil
 
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -82,8 +83,11 @@ class TestLogAnalyzer(unittest.TestCase):
     def setUp(self):
         self._log_dir_obj = TemporaryDirectory(dir=REPO)
         self._result_dir_obj = TemporaryDirectory(dir=REPO)
+        self._report_data = TemporaryDirectory(dir=REPO)
+
         self.log_dir = Path(self._log_dir_obj.name)
         self.result_dir = Path(self._result_dir_obj.name)
+        self.report_data = Path(self._report_data.name)
 
         log_name_set = [
             'ddsadsdas.log',
@@ -106,7 +110,12 @@ class TestLogAnalyzer(unittest.TestCase):
             for line in self.DIRTY_LOG_CONTENT:
                 fp.write(f'{line}\n')
 
+        path = self.report_data / 'jquery.tablesorter.min.js'
+        path.touch()
+
         template_report_path = DATA_DIR / 'report_data' / 'report_tpl.html'
+        shutil.copy(str(template_report_path), str(self.report_data))
+
         with template_report_path.open(mode='r', encoding='utf-8') as fp:
             template = Template(fp.read())
 
@@ -174,7 +183,7 @@ class TestLogAnalyzer(unittest.TestCase):
             max_error_rate=50
         )
 
-        report_path = Reporter(DATA_DIR / 'report_data')(
+        report_path = Reporter(self.report_data)(
             statistic_raw_queue,
             report_size=100,
             result_dir=self.result_dir,
@@ -189,6 +198,7 @@ class TestLogAnalyzer(unittest.TestCase):
     def tearDown(self):
         self._log_dir_obj.cleanup()
         self._result_dir_obj.cleanup()
+        self._report_data.cleanup()
 
 
 if __name__ == "__main__":
