@@ -1,7 +1,7 @@
 import logging
 import statistics
 
-from collections import namedtuple, defaultdict
+from collections import namedtuple
 
 
 RequestStatisticRow = namedtuple(

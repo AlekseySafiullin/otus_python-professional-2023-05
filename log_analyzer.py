@@ -7,7 +7,6 @@ import logging
 import argparse
 
 from pathlib import Path
-from datetime import datetime
 
 from src.log_analyzer_tool.nginx_log import NginxLog
 from src.log_analyzer_tool.statistic_calculator import StatisticCalculator
