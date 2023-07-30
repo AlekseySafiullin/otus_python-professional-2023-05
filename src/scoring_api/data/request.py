@@ -1,3 +1,5 @@
+from functools import lru_cache
+
 from . import field
 
 
@@ -31,11 +33,13 @@ REQUEST_METHOD_CLIENTS_INTERESTS = 'clients_interests'
 
 class RequestMeta(type):
     def __new__(cls, name, bases, attrs):
-        __field_map = {
-            name: value
-            for name, value in attrs.items()
-            if isinstance(value, field.Field)
-        }
+        __field_map = {}
+        for name, value in attrs.items():
+            if not isinstance(value, field.Field):
+                continue
+            value.name = name
+            __field_map[name] = value
+
         __orig_init = attrs.get('__init__')
 
         def init(self, **kwargs):
@@ -61,23 +65,41 @@ class RequestMeta(type):
 
 
 class RequestBase(metaclass=RequestMeta):
+    request_name = None
+
     def __init__(self, *args, **kwargs):
         pass
 
     def is_valid(self):
-        return all(
-            getattr(self.__class__, name).is_valid(self)
-            for name in self.__class__._field_map
-            if hasattr(self, name)
-        )
+        for name in self.__class__._field_map:
+            if not hasattr(self, name):
+                continue
+
+            is_valid, message = getattr(self.__class__, name).is_valid(self)
+
+            if not is_valid:
+                return is_valid, message
+
+        return True, None
 
 
 class ClientsInterestsRequest(RequestBase):
+    request_name = 'clients_interests'
+
     client_ids = field.ClientIDsField(required=True)
     date = field.DateField(required=False, nullable=True)
 
+    def is_valid(self):
+        is_valid, message = super().is_valid()
+        if not is_valid:
+            return is_valid, message
+
+        return True, None
+
 
 class OnlineScoreRequest(RequestBase):
+    request_name = 'online_score'
+
     first_name = field.CharField(required=False, nullable=True)
     last_name = field.CharField(required=False, nullable=True)
     email = field.EmailField(required=False, nullable=True)
@@ -85,11 +107,29 @@ class OnlineScoreRequest(RequestBase):
     birthday = field.BirthDayField(required=False, nullable=True)
     gender = field.GenderField(required=False, nullable=True)
 
+    def is_valid(self):
+        is_valid, message = super().is_valid()
+        if not is_valid:
+            return is_valid, message
 
-REQUEST_METHOD_MAP = {
-    REQUEST_METHOD_CLIENTS_INTERESTS: ClientsInterestsRequest,
-    REQUEST_METHOD_ONLINE_SCORE: OnlineScoreRequest
-}
+        required_field_name_set_queue = [
+            (self.__class__.phone.name, self.__class__.email.name),
+            (self.__class__.first_name.name, self.__class__.last_name.name),
+            (self.__class__.gender.name, self.__class__.birthday.name),
+        ]
+        required_field_pair_map = {
+            ' and '.join(name_set): all(getattr(self, name) for name in name_set)
+            for name_set in required_field_name_set_queue
+        }
+        is_valid = any(required_field_pair_map.values())
+        if not is_valid:
+            return (
+                is_valid,
+                f'Required field combinations missing: '
+                f'{" OR ".join(required_field_pair_map)}'
+            )
+
+        return True, None
 
 
 class MethodRequest(RequestBase):
@@ -99,8 +139,8 @@ class MethodRequest(RequestBase):
     arguments = field.ArgumentsField(required=True, nullable=True)
     method = field.CharField(required=True, nullable=False)
 
-    def __init__(self, **kwargs):
-        self._method = REQUEST_METHOD_MAP[self.method](**self.arguments)
+    def is_valid(self):
+        return super().is_valid()
 
     @property
     def is_admin(self):

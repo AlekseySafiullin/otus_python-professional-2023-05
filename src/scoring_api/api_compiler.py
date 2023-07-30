@@ -16,7 +16,7 @@ request_method_0 = MethodRequest(
         'client_ids': [1, 2, 3, 4, 5],
         'date': '23.07.2023'
     },
-    method='clients_interests'
+    method='clients_interests',
 )
 
 request_method_1 = MethodRequest(
@@ -27,9 +27,9 @@ request_method_1 = MethodRequest(
         'first_name': 'first_name',
         'last_name': 'last_name',
         'email': 'email@gmail.com',
-        'phone': '1111111',
-        'birthday': '11.09.2023',
-        'gender': 'Female'
+        'phone': '71111111111',
+        'birthday': '11.09.2022',
+        'gender': 0
     },
     method='online_score'
 )
