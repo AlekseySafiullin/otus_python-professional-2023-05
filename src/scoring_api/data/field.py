@@ -62,13 +62,23 @@ class Field(metaclass=FieldMeta):
 class ListField(Field):
     item_type = None
 
+    def __init__(self, required=False, nullable=False, not_empty=False):
+        super().__init__(required=required, nullable=nullable)
+        self.not_empty = not_empty
+
     def is_valid(self, instance):
         value_list = self.storage[instance]
 
-        if not hasattr(value_list, '__iter__'):
+        if not isinstance(value_list, list):
             return (
                 False,
-                f'{self.__class__.__name__} have to support __iter__ protocol'
+                f'{self.__class__.__name__} have to be list'
+            )
+
+        if not value_list and self.not_empty:
+            return (
+                False,
+                f'{self.__class__.__name__} must not be empty'
             )
 
         for value in value_list:
