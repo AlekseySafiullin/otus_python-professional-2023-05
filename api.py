@@ -13,8 +13,8 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from src.scoring_api.scoring import get_score, get_interests
 
-from src.scoring_api.data.request import \
-    MethodRequest, OnlineScoreRequest, ClientsInterestsRequest
+from src.scoring_api.data.request import (MethodRequest, OnlineScoreRequest,
+    ClientsInterestsRequest)
 
 
 SALT = "Otus"

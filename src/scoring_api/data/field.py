@@ -18,7 +18,7 @@ class FieldMeta(type):
             if value is None:
                 return (
                     self.nullable,
-                    '' if self.nullable else 'Value cannot be None'
+                    None if self.nullable else 'Value cannot be None'
                 )
 
             for is_valid_fn in is_valid_fn_queue[::-1]:
@@ -26,7 +26,7 @@ class FieldMeta(type):
                 if not is_valid:
                     return is_valid, message
 
-            return True, ''
+            return True, None
 
         attrs['is_valid'] = is_valid
 
@@ -86,7 +86,7 @@ class ListField(Field):
             if not is_valid:
                 return is_valid, message
 
-        return True, ''
+        return True, None
 
 
 class CharField(Field):
@@ -95,48 +95,54 @@ class CharField(Field):
 
     @classmethod
     def _value_is_valid(cls, value):
-        return (
-            isinstance(value, str),
-            f'For {cls.__name__} value must be str'
-        )
+        if not isinstance(value, str):
+            return False, f'For {cls.__name__} value must be str'
+        
+        return True, None
 
 
 class ArgumentsField(Field):
     def is_valid(self, instance):
         value = self.storage[instance]
-        message = f'For {self.__class__.__name__} value must be correct JSON'
 
         try:
             json.dumps(value)
         except:
-            return False, message
+            return (
+                False,
+                f'For {self.__class__.__name__} value must be correct JSON'
+            )
 
-        return True, message
+        return True, None
 
 
 class EmailField(CharField):
     def is_valid(self, instance):
         value = self.storage[instance]
-        message = f'For {self.__class__.__name__} value have to contain @'
 
-        if '@' in value:
-            return True, message
+        if '@' not in value:
+            return (
+                False,
+                f'For {self.__class__.__name__} value have to contain @'
+            )
 
-        return False, message
+        return True, None 
 
 
 class PhoneField(Field):
     def is_valid(self, instance):
         value = str(self.storage[instance])
-        message = (
-            f'For {self.__class__.__name__} value have to starts with number 7 '
-            f'and and contain 11 digits'
-        )
 
-        if value.startswith('7') and len(value) == 11:
-            return True, message
+        if not value.startswith('7') or not len(value) == 11:
+            return (
+                False,
+                (
+                    f'For {self.__class__.__name__} value have to starts with number'
+                    f' 7 and and contain 11 digits'
+                )
+            )
 
-        return False, message
+        return True, None
 
 
 class DateField(Field):
@@ -149,32 +155,35 @@ class DateField(Field):
         return datetime.strptime(value, self.FORMAT).date()
 
     def is_valid(self, instance):
-        message = (
-            f'For {self.__class__.__name__} value have to conform to '
-            f'format: {self.FORMAT}'
-        )
-
         try:
             self.to_date(self.storage[instance])
         except ValueError:
-            return False, message
+            return (
+                False,
+                (
+                    f'For {self.__class__.__name__} value have to conform to '
+                    f'format: {self.FORMAT}'
+                )
+            )
 
-        return True, message
+        return True, None
 
 
 class BirthDayField(DateField):
     def is_valid(self, instance):
         value = self.to_date(self.storage[instance])
         now = date.today()
-        message = (
-            f'For {self.__class__.__name__} value have to be actual and less '
-            f'then 70 years'
-        )
 
         if value > now or now.year - value.year > 70:
-            return False, message
+            return (
+                False,
+                (
+                    f'For {self.__class__.__name__} value have to be actual and '
+                    f'less then 70 years'
+                )
+            )
 
-        return True, message
+        return True, None
 
 
 class IntField(Field):
@@ -183,10 +192,10 @@ class IntField(Field):
 
     @classmethod
     def _value_is_valid(cls, value):
-        return (
-            isinstance(value, int),
-            f'For {cls.__name__} value must be int'
-        )
+        if not isinstance(value, int):
+            return False, f'For {cls.__name__} value must be int'
+
+        return True, None
 
 
 class GenderField(IntField):
@@ -194,12 +203,17 @@ class GenderField(IntField):
 
     def is_valid(self, instance):
         value = self.storage[instance]
-        message = (
-            f'For {self.__class__.__name__} have to match one of the values '
-            f'{self.CORRECT_VALUES}'
-        )
 
-        return value in self.CORRECT_VALUES, message
+        if value not in self.CORRECT_VALUES:
+            return (
+                False,
+                (
+                    f'For {self.__class__.__name__} have to match one of the '
+                    f'values {self.CORRECT_VALUES}'
+                )
+            )
+
+        return True, None
 
 
 class ClientIDsField(ListField):
